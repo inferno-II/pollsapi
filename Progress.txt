@@ -1,0 +1,252 @@
+                                          
+                        Building APIs with Django & Django Rest Framework (DRF)
+                                                (Book)
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________
+
+         Contents:
+            1) Introductions
+            2) Setup Model and Admin   
+            3) A simple API with pure Django
+            4) Serializing and Deserializing Data
+            5) Views and Generic Views
+            6) More views and viewsets
+            7) Access Control
+            8) Testing and Continuous Integeration
+            9) Appendix
+
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________
+
+
+1) Introductions
+2) Setup Model and Admin
+   - create a virtual enviroment and install packages
+      $ mkvirtualenv pollsapi                         (create a virtual env called pollsapi)
+      $ then inside the <pollsapi> venv install Django=2.0.x and Django Rest Framework(DRF)=3.7.x
+         * pip install django==2.0.12
+         * pip install djangorestframework==3.7.6
+   - create the pollsapi Django project (ofcourse still being inside the <pollsapi> venv)
+      $ django-admin startproject pollsapi
+   - unless explicitly said so, all the terminal commands and package install is done inside the <pollsapi> venv
+   - Database setup, migrate the default apps in the <pollsapi> projects to get the database started
+      $ python manage.py migrate
+   - Creating models
+      $ first create an app which houses our database models
+         * python manage.py startapp polls
+      $ edit models.py in <polls/> and add the models (Poll, Choice, Vote)
+   - Activating models
+      $ add <rest_framework> & <polls> app to <the INSTALLED_APPS> list in the <settings.py> found in <pollsapi/> project directory
+      $ apply migrations to create tables for the models we created
+         * python manage.py makemigrations polls      (change the model code to SQL code)
+         * pyhton manage.py migrate                   (apply the SQL generated code and create tables in the database)
+      $ setup the urls files
+         * create <urls.py> file in <polls/> app and add an empty list called <urlpatterns> (naming should not be changed for the list)
+         * include the above created url file in the project <urls.py> file found in <pollsapi/> directory
+            # use <include> and <re_path> functions
+         * pyhton manage.py runserver                 (run the development server to see if django is set up)
+      $ register the models to the admin site by editting <admin.py> file in <polls/> app
+         * import the models to register
+         * use the <admin.site.register()> function to register the models
+         * create a super user so as to access the Django Admin page
+            # use <python manage.py createsuperuser> command 
+
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________
+
+3) A simple API with pure Django
+   - this chapter focuses on creating an API using just Django
+   - writing and connecting the views
+      $ in the views.py file in the polls/ directory add two view to handle polls list and detail api connection
+         * the two views are <polls_list> and <polls_detail>
+      $ create a url mapping for the two views in the urls.py file in polls/ app
+   - Using the API, you may test the api using various tools
+      $ use the terminal to test the api
+         * curl <url>
+            # <url> => http://127.0.0.1:8000/polls/
+      $ use web browser
+         * http://127.0.0.1:800//polls/
+      $ use Postman
+         * send get request to http://127.0.0.1:800//polls/
+
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________
+
+4) Serializing and Deserializing Data
+   - Creating Serializers
+      $ create serializers.py file in polls/ and add serializers for all the models
+      $ the serializers class has the follwing important methods
+         * is_valid(self, ..)                      (used to check if the data provided is valid to create an instance of the model)
+         * save(self, ..)                          (used to create or update an instance in the database)
+         * create(self, validated_data, ..)        (used to create an instnace, can be customized to modify the creating behaviour)
+         * update(self, instance, validated_data, ..)       (used to update an instance, can be customized to modify the update process)
+   - check out the django shell to see how the Serializer works by issuing various commands inclduing the ones above
+      $ python manage.py shell                     (start the django shell)
+   
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________
+
+5) Views and Generic Views
+   - Creating views with APIView
+      $ create and edit apiviews.py file in polls/ app
+         * this will create views for the poll api communication
+            # create two apiviews for poll list and poll detail
+      $ update the url mapping in urls.py in /polls to use the new api class views
+   - use DRF generic views to simplify code and assist code reusability
+      $ edit apiviews.py file once again and update <PollList> and <PollDetail> classes to use generic views
+         * doing so gives up more options in API requests
+         * create <PollList> apiView with <ListCreateAPIView>
+         * create <PollDetail> apiView with <RetrieveDestroyAPIView>
+      $ create apiView classes to Choice and Vote models (thus edit apiviews.py file)
+         * create <ChoiceList> apiView class using <ListCreateAPIView<
+         * create <CreateVote> apiView class using <CreateAPIView>
+      $ the meaning of the above generic api classes and their elements is as follows:
+         * <ListCreateAPIView>               (gets a list of entities or creates them, requests_handled <get, post>)
+         * <RetrieveDestroyAPIView>          (retrive or delete an individual entity, requests_handled <get, delete>)
+         * <CreateAPIView>                   (creating entities, requests_handled <post>)
+         * all the above classes have two crutial elements
+            # <queryset>                     (determines initial queryset which can be modified by operations within the view)
+               % this is like the result that gets returned as a response, but might get modified based on the request before returning it
+            # <serializer_class>             (used for validating, deserializing input and serializing output)
+   - note on using Postman
+      $ when sending a simple <GET> request all you need is the url of the api
+      $ but when you send a <POST> request to an api, you must fill the following parameters in the <Headers> tab
+         * <KEY> => <Content-Type>
+         * <VALUE> => <application/json>
+
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________
+
+6) More views and viewsets
+   - update the apiViews and url mapping for <ChoiceList> and <CreateVote> classes
+      $ in the <ChoiceList> class instead of setting the queryset to all choice objects, override the <get_queryset()> function to customize the queryset
+      $ use the <APIView> for the <CreateVote> instead of generic view and override the <post> function so as to get the required values to cast a vote
+         * the <APIView> was used here because there was many stuff that was specific and using the generic view would result into too much customization
+      $ update the url mapping for both classes accordingly
+   - replace the <PollList> and <PollDetail> view classes with <PollViewSet> class and update the url mapping accordingly
+      $ use <ModelViewSet> for the <PollViewSet> class
+      $ use <DefaultRouter()> from rest_framework for the url mapping of the <PollViewSet> view
+         * add the url of the <DefaultRouter()> to the existing <urlpatterns> list
+   - when to use <APIView>, <generics.*> & <viewsets.ModelViewSet> 
+      $ use <ModelViewSet> when you are going to allow all or most of CRUD operations on a model
+      $ use <generic> when you want to allow some (specific) operations on a model
+      $ use <APIView> when you want to completely customize the api behaviour to a model
+
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________
+
+7) Access Control
+   - Creating a serializer, an api and url mapping for the create user functionality
+      $ add <UserSerializer> to the <serializers.py> file in <polls/>
+         * override the <create()> method to make sure the data is validated and the password is hased before saving to the database
+      $ add an api view class called <UserCreate> in the <apiviews.py> class
+         * use the <generics> api class of <CreateAPIView>
+      $ add a url mapping for the <UserCreate> view class in the <urls.py> file in <polls/>
+   - setup token authetication and modify <UserCreate> view
+      $ edit <settings.py> file in <pollsapi/> project directory to include DRF authentication
+         * add a new dictionary called <REST_FRAMEWORK> and set its Content as follows:
+            # add values for default authentication and permission classes
+         * add <rest_framework.authtoken> to installed apps
+      $ exempt the <UserCreate> view from authentication by overriding the global setting for authentication & permission classes
+      $ update <UserSerializer> so it genetates token when user is created
+   - setup the login api and url
+      $ edit <apiviews.py> file in <polls/> app to add a <LoginView> class which uses <APIView>
+         * this view will authenticate the user and return the token, hence login the user
+      $ create a url mapping for this view in <urls.py> file in <polls/>
+      $ alternatively you need not to write a view, rather u you can simply use an existing class in rest_framework for authentication
+         * simply import and use the <views.obtain_auth_token> view from <rest_framework.authtoken>
+         * map the above view to a url and your good to go
+   - from this point on when trying to perform any request on the api, a user must be authenticated
+      $ in you request add a <Autherization> key with the value of <Token <your_token>>
+   - add permissions on polls deletion and choice addition
+      $ to allow deletion of a poll by the user who created it only, override the <destroy()> function in <PollViewSet> view
+      $ to allow addition of a choice for a poll by the user who created the poll only, then override the <post()> function for the <ChoiceList> view
+      $ in both the above cases check if the user who is making the request is the user who created the poll
+
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________
+
+8) Testing and Continuous Integeration
+   - DRF provides important classes for API Testing
+      $ <APIRequestFactory>
+         * this allows to create requests without any http method
+         * the requests can then be passed to any view for comparision of the response
+      $ <APIClient>
+         * this allows to <GET> or <POST> a <URL> and test responses 
+      $ <APITestCase>
+         * most of the tests to be written and perfomed will sunclass from this class
+   - write a test for polls list function which is for <PollViewSet>
+      $ edit <tests.py> file in <polls/> app and add the test for poll list
+         * write a <TestPoll> class which subclasses from <APITestCase>
+            # write the <setUp()> and <test_list()> functions
+      $ but if we ran our test now, it would fail because we have not attached an authenticated user with the request
+   - test api with authentication
+      $ edit the <TestPoll> class in <tests.py> file
+         * on the <setUp()> function setup a user and a token for that user
+            # the user is setup using a helper function called <setup_user()>
+         * add a new helper fucntion called <setup_user()> which creates a test user and returns it
+            # make this function <@staticmethod>
+         * edit the <test_list()> function by adding the user and token created above into the request
+      $ you can now run your test by issuing the following command on the terminal
+         * python manage.py test
+      $ based on the output from the test:
+         * either correct your test so that it tests what it should properly
+         * if there is nothing wrong with your test case, then correct your system part so that it passes its test
+   - alternatively you can use the <APIClient> to test your views
+      $ in the <setUp()> method of the <TestPoll> class, add an <APIClient> to the <self> attribute
+      $ add a new function called <test_list2()> which logs in the <APIClient> and performs a get request using that client
+   - use CircleCI to run tests everytime you commit and push to a git repository
+      $ first setup CircleCI
+         * signin to <circleci.com> with your git account
+         * activate github webhook in the github profile page to enable the service <hook>
+         * add <.circleci/config.yml> to the ptoject root directory
+            # <*.yml> is a <YAML> text file
+               % <YAML> is a human readable data serialization format
+      $ write circle configuration file
+         * add <requirements.txt> file to define our dependencies
+         * edit <.circleci/config.yml> file to test your project, the content of the file perfoms:
+            # creating virtual env and installing dependencies
+            # activating the venv and running tests
+            # store the results of the test (I think, I understood it this way)
+
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________
+
+9) Appendix
+   - use Postman to test your APIs
+      $ there are 4 key elements in making an HTTP request
+         * URL: this is where our APIendpoint resides
+         * Method: the purpose of the APIendpoint, the method maybe GET, POST, DELETE ... and so on
+         * Headers: provide required information like
+            # info about request or response
+            # info about the object sent in the body
+            # sometimes info about authentication
+               % Postman supports few authentication mechanisms like 
+                  ~ Basic Auth
+                  ~ Digest Auth
+                  ~ Oauth
+               % these authentication methods can be used for API requests
+         * Body: this is where objects required for the service are sent
+      $ using Collections when saving API requests helps to keep API requests organized
+   - Documenting APIs
+      $ the book introduces two tools named <Swagger> and <coreapi> to assit the process of API documentation
+      $ both tools show all the API end points are available for a web application
+      $ using swagger
+         * install <django-rest-swagger>
+            # pip install django-rest-swagger
+         * update the <settings.py> file in the <pollsapi/> project directory
+            # add <rest_framework_swagger> to <INSTALLED_APPS> list
+         * add swagger to <urls.py> file found in <polls/> app
+            # map a <get_swagger_view> instance to <swagger-docs/> url
+      $ using coreapi
+         * this is a tool from DRF for documenting and interacting with APIs
+         * install <coreapi>
+            # pip install coreapi
+         * add <coreapi> urls to <urls.py> file in <polls/> app
+            # map a <include_docs_urls> view from <rest_framework.documentation>
+               % let <coreapi> be mapped to the <docs/> url
+
+      --------------------------------------------------------------------------------------------
+                                          DONE !
+      ____________________________________________________________________________________________
+      ____________________________________________________________________________________________                                          
